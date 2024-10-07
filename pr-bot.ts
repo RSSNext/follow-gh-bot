@@ -120,6 +120,24 @@ async function analyzePR(owner: string, repoName: string, prNumber: number) {
 
   console.log('Suggested PR Title:', titleResponse.choices[0].message.content)
 
+  // 使用 OpenAI 生成修改摘要
+  const summaryResponse = await openai.chat.completions.create({
+    model: 'gpt-4o-mini',
+    messages: [
+      {
+        role: 'system',
+        content:
+          'Summarize the given code changes in a concise manner, focusing on the main modifications and their impact.',
+      },
+      {
+        role: 'user',
+        content: `PR Summary:\n\n${summary}\n\nCode changes:\n${diffs}\n\nProvide a brief summary of the main changes and their impact.`,
+      },
+    ],
+  })
+
+  console.log('Change Summary:', summaryResponse.choices[0].message.content)
+
   // 使用 OpenAI 生成代码审查意见
   const reviewResponse = await openai.chat.completions.create({
     model: 'gpt-4o',
@@ -144,7 +162,7 @@ async function analyzePR(owner: string, repoName: string, prNumber: number) {
     owner,
     repo: repoName,
     issue_number: prNumber,
-    body: `Suggested PR Title: ${titleResponse.choices[0].message.content}\n\nCode Review:\n${reviewResponse.choices[0].message.content}`,
+    body: `Suggested PR Title: \n\n${titleResponse.choices[0].message.content}\n\nChange Summary:\n${summaryResponse.choices[0].message.content}\n\nCode Review:\n${reviewResponse.choices[0].message.content}`,
   })
 }
 
