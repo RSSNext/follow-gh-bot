@@ -2,6 +2,7 @@ import { openai } from './ai'
 import { Octokit } from '@octokit/rest'
 import { createAppAuth } from '@octokit/auth-app'
 import 'dotenv/config'
+import { config } from 'yargs'
 const octokit = new Octokit({
   authStrategy: createAppAuth,
   auth: {
@@ -54,20 +55,34 @@ async function handlePRComment(
   commentId: number,
   commentBody: string,
 ) {
-  if (commentBody.trim() === '/ai-review') {
-    const comment = await octokit.issues.getComment({
-      owner,
-      repo,
-      comment_id: commentId,
-    })
+  const trimmedCommentBody = commentBody.trim()
 
-    const username = comment.data.user!.login
-    const isTrusted = await isTrustedUser(owner, repo, username)
+  if (!trimmedCommentBody.startsWith('/ai-review')) {
+    return
+  }
+  const commands = trimmedCommentBody.split(' ').slice(1)
+  const comment = await octokit.issues.getComment({
+    owner,
+    repo,
+    comment_id: commentId,
+  })
+  const username = comment.data.user!.login
+  const isTrusted = await isTrustedUser(owner, repo, username)
 
-    if (isTrusted) {
+  if (!isTrusted) {
+    console.log(`User ${username} is not authorized to trigger AI review.`)
+    return
+  }
+
+  switch (commands[0]) {
+    case 'apply': {
+      await applyAIReviewSuggestion(owner, repo, prNumber)
+      break
+    }
+
+    default: {
       await analyzePR(owner, repo, prNumber)
-    } else {
-      console.log(`User ${username} is not authorized to trigger AI review.`)
+      break
     }
   }
 }
@@ -102,41 +117,34 @@ async function analyzePR(owner: string, repoName: string, prNumber: number) {
     )
     .join('\n')
 
-  // 使用 OpenAI 生成 PR 标题
-  const titleResponse = await openai.chat.completions.create({
+  // 使用 OpenAI 生成 PR 标题和修改摘要
+  const titleAndSummaryResponse = await openai.chat.completions.create({
     model: 'gpt-4o-mini',
     messages: [
       {
         role: 'system',
         content:
-          'Generate a Conventional Commits format PR title based on the given code changes.',
+          'Generate a Conventional Commits format PR title and a concise summary of the given code changes. Focus on the main modifications and their impact.',
       },
       {
         role: 'user',
-        content: `PR Summary:\n\n${summary}\n\nCode changes:\n${diffs}\n\nGenerate a Conventional Commits format PR title.`,
+        content: `PR Summary:\n\n${summary}\n\nCode changes:\n${diffs}\n\nProvide a Conventional Commits format PR title and a brief summary of the main changes and their impact. Return the result as a JSON object with "title" and "summary" fields.`,
       },
     ],
+    response_format: { type: 'json_object' },
   })
 
-  console.log('Suggested PR Title:', titleResponse.choices[0].message.content)
+  const titleAndSummary = JSON.parse(
+    titleAndSummaryResponse.choices[0].message.content || '{}',
+  )
 
-  // 使用 OpenAI 生成修改摘要
-  const summaryResponse = await openai.chat.completions.create({
-    model: 'gpt-4o-mini',
-    messages: [
-      {
-        role: 'system',
-        content:
-          'Summarize the given code changes in a concise manner, focusing on the main modifications and their impact.',
-      },
-      {
-        role: 'user',
-        content: `PR Summary:\n\n${summary}\n\nCode changes:\n${diffs}\n\nProvide a brief summary of the main changes and their impact.`,
-      },
-    ],
-  })
+  if (!titleAndSummary.title || !titleAndSummary.summary) {
+    console.error('Failed to generate PR title and summary')
+    return
+  }
 
-  console.log('Change Summary:', summaryResponse.choices[0].message.content)
+  console.log('Suggested PR Title:', titleAndSummary.title)
+  console.log('Change Summary:', titleAndSummary.summary)
 
   // 使用 OpenAI 生成代码审查意见
   const reviewResponse = await openai.chat.completions.create({
@@ -162,8 +170,72 @@ async function analyzePR(owner: string, repoName: string, prNumber: number) {
     owner,
     repo: repoName,
     issue_number: prNumber,
-    body: `Suggested PR Title: \n\n${titleResponse.choices[0].message.content}\n\nChange Summary:\n${summaryResponse.choices[0].message.content}\n\nCode Review:\n${reviewResponse.choices[0].message.content}`,
+    body: `Suggested PR Title: \n\n${titleAndSummary.title}\n\nChange Summary:\n${titleAndSummary.summary}\n\nCode Review:\n${reviewResponse.choices[0].message.content}`,
   })
+}
+
+async function applyAIReviewSuggestion(
+  owner: string,
+  repo: string,
+  prNumber: number,
+) {
+  try {
+    // 获取 PR 的所有评论
+    const { data: comments } = await octokit.issues.listComments({
+      owner,
+      repo,
+      issue_number: prNumber,
+    })
+
+    // 查找本应用发布的最新评论
+    const botComment = comments
+      .reverse()
+      .find(
+        (comment) =>
+          comment.user?.type === 'Bot' && comment.user?.login === config.name,
+      )
+
+    if (!botComment) {
+      await octokit.issues.createComment({
+        owner,
+        repo,
+        issue_number: prNumber,
+        body: 'No AI review suggestion found. Please run `/ai-review` first.',
+      })
+      return
+    }
+
+    // 从评论中提取建议的 PR 标题
+    const titleMatch = botComment.body?.match(/Suggested PR Title:\s*\n\n(.+)/)
+    if (!titleMatch) {
+      throw new Error('Could not find suggested PR title in the comment.')
+    }
+    const suggestedTitle = titleMatch[1].trim()
+
+    // 更新 PR 标题
+    await octokit.pulls.update({
+      owner,
+      repo,
+      pull_number: prNumber,
+      title: suggestedTitle,
+    })
+
+    // 发布成功消息
+    await octokit.issues.createComment({
+      owner,
+      repo,
+      issue_number: prNumber,
+      body: `Successfully applied the suggested PR title: "${suggestedTitle}"`,
+    })
+  } catch (error) {
+    console.error('Error applying AI review suggestion:', error)
+    await octokit.issues.createComment({
+      owner,
+      repo,
+      issue_number: prNumber,
+      body: 'Failed to apply AI review suggestion. Please try again or contact support.',
+    })
+  }
 }
 
 async function isTrustedUser(
