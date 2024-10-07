@@ -129,7 +129,7 @@ async function analyzePR(owner: string, repoName: string, prNumber: number) {
       },
       {
         role: 'user',
-        content: `PR Summary:\n\n${summary}\n\nCode changes:\n${diffs}\n\nProvide a Conventional Commits format PR title and a brief summary of the main changes and their impact. Return the result as a JSON object with "title" and "summary" fields.`,
+        content: `PR Summary:\n\n${summary}\n\nCode changes:\n${diffs}\n\nProvide a Conventional Commits format PR title in 60 characters or less and a brief summary of the main changes and their impact. Return the result as a JSON object with "title" and "summary" fields.`,
       },
     ],
     response_format: { type: 'json_object' },
