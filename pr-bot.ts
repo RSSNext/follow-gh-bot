@@ -131,7 +131,7 @@ async function analyzePR(owner: string, repoName: string, prNumber: number) {
       },
       {
         role: 'user',
-        content: `PR Summary:\n${summary}\n\nCode changes:\n${diffs}\n\nProvide a code review focusing only on issues that require a change request. Use a markdown list for the review, citing file paths and line numbers. If there are no issues requiring a change request, respond with "No change requests necessary."`,
+        content: `PR Summary:\n\n${summary}\n\nCode changes:\n${diffs}\n\nProvide a code review focusing only on issues that require a change request. Use a markdown list for the review, citing file paths and line numbers. If there are no issues requiring a change request, respond with "No change requests necessary."`,
       },
     ],
   })
