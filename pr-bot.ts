@@ -2,7 +2,8 @@ import { openai } from './ai'
 import { Octokit } from '@octokit/rest'
 import { createAppAuth } from '@octokit/auth-app'
 import 'dotenv/config'
-import { config } from 'yargs'
+import { config } from './config'
+
 const octokit = new Octokit({
   authStrategy: createAppAuth,
   auth: {
