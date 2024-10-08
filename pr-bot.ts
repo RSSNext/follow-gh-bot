@@ -129,14 +129,36 @@ async function analyzePR(owner: string, repoName: string, prNumber: number) {
       },
       {
         role: 'user',
-        content: `PR Summary:\n\n${summary}\n\nCode changes:\n${diffs}\n\nProvide a Conventional Commits format PR title in 60 characters or less and a brief summary of the main changes and their impact. Return the result as a JSON object with "title" and "summary" fields.`,
+        content: `PR Summary:\n\n${summary}\n\nCode changes:\n${diffs}\n\nProvide a Conventional Commits format PR title in 60 characters or less and a brief summary of the main changes and their impact.`,
       },
     ],
-    response_format: { type: 'json_object' },
+    functions: [
+      {
+        name: 'generate_pr_title_and_summary',
+        description:
+          'Generate a PR title and summary based on the given changes',
+        parameters: {
+          type: 'object',
+          properties: {
+            title: {
+              type: 'string',
+              description:
+                'Conventional Commits format PR title in 60 characters or less',
+            },
+            summary: {
+              type: 'string',
+              description: 'Brief summary of the main changes and their impact',
+            },
+          },
+          required: ['title', 'summary'],
+        },
+      },
+    ],
+    function_call: { name: 'generate_pr_title_and_summary' },
   })
 
   const titleAndSummary = JSON.parse(
-    titleAndSummaryResponse.choices[0].message.content || '{}',
+    titleAndSummaryResponse.choices[0].message.function_call?.arguments || '{}',
   )
 
   if (!titleAndSummary.title || !titleAndSummary.summary) {
@@ -171,7 +193,11 @@ async function analyzePR(owner: string, repoName: string, prNumber: number) {
     owner,
     repo: repoName,
     issue_number: prNumber,
-    body: `Suggested PR Title: \n\n${titleAndSummary.title}\n\nChange Summary:\n${titleAndSummary.summary}\n\nCode Review:\n${reviewResponse.choices[0].message.content}`,
+    body: `**Suggested PR Title:**\n\n${
+      '```\n' + titleAndSummary.title + '\n```'
+    }\n\n**Change Summary:**\n${titleAndSummary.summary}\n\n**Code Review:**\n${
+      reviewResponse.choices[0].message.content
+    }`,
   })
 }
 
@@ -188,13 +214,16 @@ async function applyAIReviewSuggestion(
       issue_number: prNumber,
     })
 
+    const regex = /\*\*Suggested PR Title:\*\*\n\n```\n(.*)\n```/
     // 查找本应用发布的最新评论
-    const botComment = comments
-      .reverse()
-      .find(
-        (comment) =>
-          comment.user?.type === 'Bot' && comment.user?.login === config.name,
+    const botComment = comments.reverse().find((comment) => {
+      return (
+        comment.user?.type === 'Bot' &&
+        comment.user?.login === config.name + '[bot]' &&
+        // 从评论中提取建议的 PR 标题
+        comment.body?.match(regex)
       )
+    })
 
     if (!botComment) {
       await octokit.issues.createComment({
@@ -205,9 +234,8 @@ async function applyAIReviewSuggestion(
       })
       return
     }
+    const titleMatch = botComment.body?.match(regex)
 
-    // 从评论中提取建议的 PR 标题
-    const titleMatch = botComment.body?.match(/Suggested PR Title:\s*\n\n(.+)/)
     if (!titleMatch) {
       throw new Error('Could not find suggested PR title in the comment.')
     }

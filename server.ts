@@ -25,15 +25,18 @@ app.post('/webhook', (req, res) => {
 })
 
 webhooks.on('issue_comment.created', async ({ payload }) => {
-  if (payload.issue.pull_request) {
-    const owner = payload.repository.owner.login
-    const repo = payload.repository.name
-    const prNumber = payload.issue.number
-    const commentBody = payload.comment.body
-    const commentId = payload.comment.id
-
-    await handlePRComment(owner, repo, prNumber, commentId, commentBody)
+  if (!payload.issue.pull_request) {
+    return
   }
+  const owner = payload.repository.owner.login
+  const repo = payload.repository.name
+  const prNumber = payload.issue.number
+  const commentBody = payload.comment.body
+  const commentId = payload.comment.id
+
+  console.log('Received comment:', commentBody)
+
+  await handlePRComment(owner, repo, prNumber, commentId, commentBody)
 })
 
 app.listen(port, () => {
