@@ -1,17 +1,8 @@
 import { openai } from './ai'
-import { Octokit } from '@octokit/rest'
-import { createAppAuth } from '@octokit/auth-app'
 import 'dotenv/config'
 import { config } from './config'
-
-const octokit = new Octokit({
-  authStrategy: createAppAuth,
-  auth: {
-    appId: process.env.APP_ID,
-    privateKey: process.env.PRIVATE_KEY,
-    installationId: process.env.INSTALLATION_ID,
-  },
-})
+import { isTrustedUser } from './utils'
+import { octokit } from './octokit'
 
 const IGNORED_FILES = [
   'package.json',
@@ -264,27 +255,6 @@ async function applyAIReviewSuggestion(
       issue_number: prNumber,
       body: 'Failed to apply AI review suggestion. Please try again or contact support.',
     })
-  }
-}
-
-async function isTrustedUser(
-  owner: string,
-  repo: string,
-  username: string,
-): Promise<boolean> {
-  try {
-    const { data: collaboratorPermission } =
-      await octokit.repos.getCollaboratorPermissionLevel({
-        owner,
-        repo,
-        username,
-      })
-
-    const trustedPermissions = ['write', 'maintain', 'admin']
-    return trustedPermissions.includes(collaboratorPermission.permission)
-  } catch (error) {
-    console.error(`Error checking user permission: ${error}`)
-    return false // 如果出现错误，默认不信任该用户
   }
 }
 
