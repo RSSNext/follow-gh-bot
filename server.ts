@@ -98,6 +98,7 @@ webhooks.on('issues.opened', async ({ payload }) => {
       repo: payload.repository.name,
       issue_number: payload.issue.number,
       state: 'closed',
+      state_reason: 'not_planned',
     })
     await octokit.issues.createComment({
       owner: payload.repository.owner.login,
