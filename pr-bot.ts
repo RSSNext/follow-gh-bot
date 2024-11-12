@@ -1,5 +1,5 @@
 import 'dotenv/config'
-import { config } from './config'
+
 import { isTrustedUser } from './utils'
 import { octokit } from './octokit'
 import { analyzePR } from './analyzePR'
@@ -61,7 +61,7 @@ async function applyAIReviewSuggestion(
     const botComment = comments.reverse().find((comment) => {
       return (
         comment.user?.type === 'Bot' &&
-        comment.user?.login === config.name + '[bot]' &&
+        comment.performed_via_github_app?.id === process.env.APP_ID &&
         // 从评论中提取建议的 PR 标题
         comment.body?.match(regex)
       )

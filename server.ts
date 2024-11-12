@@ -86,6 +86,28 @@ For more details, please visit: https://www.conventionalcommits.org/
   }
 })
 
+webhooks.on('issues.opened', async ({ payload }) => {
+  console.log('Received issue opened:', payload)
+  const comment = payload.issue.body
+
+  // - [x] This issue is valid
+  if (!comment?.includes('- [x] This issue is valid')) {
+    console.log('Invalid issue ' + payload.issue.number, ' closed: ', comment)
+    await octokit.issues.update({
+      owner: payload.repository.owner.login,
+      repo: payload.repository.name,
+      issue_number: payload.issue.number,
+      state: 'closed',
+    })
+    await octokit.issues.createComment({
+      owner: payload.repository.owner.login,
+      repo: payload.repository.name,
+      issue_number: payload.issue.number,
+      body: 'This issue is invalid. Please provide more information, or update the issue description and re-open the issue.',
+    })
+  }
+})
+
 webhooks.on('issue_comment.created', async ({ payload }) => {
   if (!payload.issue.pull_request) {
     return
