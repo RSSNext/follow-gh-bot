@@ -3,6 +3,7 @@ import { Webhooks } from '@octokit/webhooks'
 import { handlePRComment } from './pr-bot'
 import { conventionalCommit, isTrustedUser } from './utils'
 import { octokit } from './octokit'
+import { analyzePR } from './analyzePR'
 
 const app = express()
 const port = process.env.PORT || 3000
@@ -33,6 +34,12 @@ webhooks.on('pull_request.opened', async ({ payload }) => {
     payload.repository.owner.login,
     payload.repository.name,
     sender,
+  )
+
+  analyzePR(
+    payload.repository.owner.login,
+    payload.repository.name,
+    payload.pull_request.number,
   )
 
   if (isMember) return
