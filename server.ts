@@ -90,6 +90,15 @@ webhooks.on('issues.opened', async ({ payload }) => {
   console.log('Received issue opened:', payload)
   const comment = payload.issue.body
 
+  if (
+    await isTrustedUser(
+      payload.repository.owner.login,
+      payload.repository.name,
+      payload.sender.login,
+    )
+  ) {
+    return
+  }
   // - [x] This issue is valid
   if (!comment?.includes('- [x] This issue is valid')) {
     console.log('Invalid issue ' + payload.issue.number, ' closed: ', comment)
