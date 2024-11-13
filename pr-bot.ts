@@ -2,7 +2,7 @@ import 'dotenv/config'
 
 import { isTrustedUser } from './utils'
 import { octokit } from './octokit'
-import { analyzePR } from './analyzePR'
+import { analyzePR } from './analyze-pr'
 
 async function handlePRComment(
   owner: string,

@@ -3,7 +3,8 @@ import { Webhooks } from '@octokit/webhooks'
 import { handlePRComment } from './pr-bot'
 import { conventionalCommit, isTrustedUser } from './utils'
 import { octokit } from './octokit'
-import { analyzePR } from './analyzePR'
+import { analyzePR } from './analyze-pr'
+import { startCron } from './cron'
 
 const app = express()
 const port = process.env.PORT || 3000
@@ -13,6 +14,8 @@ const webhooks = new Webhooks({
 })
 
 app.use(express.json())
+
+startCron()
 
 app.post('/webhook', (req, res) => {
   webhooks
@@ -99,9 +102,11 @@ webhooks.on('issues.opened', async ({ payload }) => {
   ) {
     return
   }
-  // - [x] This issue is valid
-  if (!comment?.includes('- [x] This issue is valid')) {
-    console.log('Invalid issue ' + payload.issue.number, ' closed: ', comment)
+
+  const needIncludedTexts = ['- [x] This issue is valid', '### Environment']
+  const isIncluded = needIncludedTexts.some((text) => comment?.includes(text))
+  if (!isIncluded) {
+    console.log('Invalid issue ' + payload.issue.number, ' closed. ')
     await octokit.issues.update({
       owner: payload.repository.owner.login,
       repo: payload.repository.name,
