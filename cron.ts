@@ -128,7 +128,11 @@ export function startCron() {
             issue_number: issue.number,
             name: 'stale',
           })
-        } else if (!hasStaleLabel && diffDays >= 30 && !hasBumpComment) {
+        } else if (
+          !hasStaleLabel &&
+          diffDays >= appConfig.markStaleIssueAfterDays &&
+          !hasBumpComment
+        ) {
           // Add stale label and comment if inactive for 30 days
           await octokit.issues.addLabels({
             owner: appConfig.owner,
@@ -151,7 +155,53 @@ export function startCron() {
     'Asia/Shanghai',
   )
 
+  // Close stale issues
+  const job3 = new CronJob(
+    '0 0 * * * *', // every day
+    async function () {
+      console.log('Checking stale issues for closing...')
+      const { data: issues } = await octokit.issues.list({
+        owner: appConfig.owner,
+        repo: appConfig.repo,
+        state: 'open',
+        labels: 'stale',
+      })
+
+      const now = new Date()
+      for (const issue of issues) {
+        if (issue.pull_request) continue
+
+        const lastUpdateDate = new Date(issue.updated_at)
+        const diffTime = now.getTime() - lastUpdateDate.getTime()
+        const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24))
+
+        if (diffDays >= appConfig.closeStaleIssueAfterDays) {
+          // Close the issue
+          await octokit.issues.update({
+            owner: appConfig.owner,
+            repo: appConfig.repo,
+            issue_number: issue.number,
+            state: 'closed',
+            state_reason: 'completed',
+          })
+
+          // Add closing comment
+          await octokit.issues.createComment({
+            owner: appConfig.owner,
+            repo: appConfig.repo,
+            issue_number: issue.number,
+            body: `This issue has been automatically closed due to inactivity. If this is still an issue, please feel free to reopen it or create a new one.`,
+          })
+        }
+      }
+    },
+    null,
+    true,
+    'Asia/Shanghai',
+  )
+
   job1.start()
   job2.start()
-  return [job1, job2]
+  job3.start()
+  return [job1, job2, job3]
 }
