@@ -25,6 +25,13 @@ const tick = async function () {
 
   const now = new Date()
   for (const issue of allIssues) {
+    if (
+      issue.labels.includes('enhancement') ||
+      issue.labels.includes('Improvement')
+    ) {
+      continue
+    }
+
     // Skip pull requests (they are also considered issues in GitHub's API)
     if (issue.pull_request) continue
 
