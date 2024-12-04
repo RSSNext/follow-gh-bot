@@ -1,19 +1,30 @@
 import { CronJob } from 'cron'
 import { appConfig } from '../configs'
 import { octokit } from '../octokit'
+import type { RestEndpointMethodTypes } from '@octokit/rest'
 
 const tick = async function () {
   console.log('Checking stale issues for closing...')
-  const { data: issues } = await octokit.issues.listForRepo({
-    owner: appConfig.owner,
-    repo: appConfig.repo,
-    state: 'open',
-    labels: 'stale',
-  })
-  console.log(`Found ${issues.length} issues`)
+  const allIssues: RestEndpointMethodTypes['issues']['listForRepo']['response']['data'] =
+    []
+  let page = 1
+  while (true) {
+    const { data: issues } = await octokit.issues.listForRepo({
+      owner: appConfig.owner,
+      repo: appConfig.repo,
+      state: 'open',
+      per_page: 100,
+      page,
+      labels: 'stale',
+    })
+    allIssues.push(...issues)
+    if (issues.length < 100) break
+    page++
+  }
+  console.log(`Found ${allIssues.length} stale issues`)
 
   const now = new Date()
-  for (const issue of issues) {
+  for (const issue of allIssues) {
     if (issue.pull_request) continue
 
     const lastUpdateDate = new Date(issue.updated_at)

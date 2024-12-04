@@ -1,19 +1,30 @@
 import { CronJob } from 'cron'
 import { octokit } from '../octokit'
 import { appConfig } from '../configs'
+import { Octokit, type RestEndpointMethodTypes } from '@octokit/rest'
 
 const tick = async function () {
   console.log('Checking in-active issues...')
-  const { data: issues } = await octokit.issues.listForRepo({
-    owner: appConfig.owner,
-    repo: appConfig.repo,
-    state: 'open',
-  })
+  const allIssues: RestEndpointMethodTypes['issues']['listForRepo']['response']['data'] =
+    []
+  let page = 1
+  while (true) {
+    const { data: issues } = await octokit.issues.listForRepo({
+      owner: appConfig.owner,
+      repo: appConfig.repo,
+      state: 'open',
+      per_page: 100,
+      page,
+    })
+    allIssues.push(...issues)
+    if (issues.length < 100) break
+    page++
+  }
 
-  console.log(`Found ${issues.length} issues`)
+  console.log(`Found ${allIssues.length} open issues`)
 
   const now = new Date()
-  for (const issue of issues) {
+  for (const issue of allIssues) {
     // Skip pull requests (they are also considered issues in GitHub's API)
     if (issue.pull_request) continue
 

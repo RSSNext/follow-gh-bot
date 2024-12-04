@@ -1,14 +1,26 @@
 import { CronJob } from 'cron'
 import { octokit } from '../octokit'
 import { appConfig } from '../configs'
+import type { RestEndpointMethodTypes } from '@octokit/rest'
 
 const tick = async function () {
   console.log('Checking in-active pull requests...')
-  const { data: pullRequests } = await octokit.pulls.list({
-    owner: appConfig.owner,
-    repo: appConfig.repo,
-  })
-  for (const pullRequest of pullRequests) {
+  const allPullRequests: RestEndpointMethodTypes['pulls']['list']['response']['data'] =
+    []
+  let page = 1
+  while (true) {
+    const { data: pullRequests } = await octokit.pulls.list({
+      owner: appConfig.owner,
+      repo: appConfig.repo,
+      per_page: 100,
+      page,
+    })
+    allPullRequests.push(...pullRequests)
+    if (pullRequests.length < 100) break
+    page++
+  }
+  console.log(`Found ${allPullRequests.length} pull requests`)
+  for (const pullRequest of allPullRequests) {
     if (pullRequest.state === 'open' && pullRequest.draft === false) {
       // Check if PR needs changes and sender hasn't responded
       const { data: reviews } = await octokit.pulls.listReviews({
