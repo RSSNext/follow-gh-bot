@@ -66,6 +66,8 @@ const tick = async function () {
         issue_number: issue.number,
         body: `This issue has been automatically marked as stale. If this issue is still affecting you, please leave any comment (for example, "bump"), and we'll keep it open. If you have any new additional information—in particular, if this is still reproducible in the latest version of Follow or in the beta—please include it with your comment!`,
       })
+
+      console.log(`Marked issue #${issue.number} as stale`)
     }
   }
 }

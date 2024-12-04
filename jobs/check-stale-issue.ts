@@ -36,6 +36,7 @@ const tick = async function () {
         issue_number: issue.number,
         body: `This issue has been automatically closed due to inactivity. If this is still an issue, please feel free to reopen it or create a new one.`,
       })
+      console.log(`Closed stale issue #${issue.number}`)
     }
   }
 }

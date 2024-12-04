@@ -65,6 +65,8 @@ const tick = async function () {
               issue_number: pullRequest.number,
               body: `This pull request has been automatically closed because it has been inactive for ${diffDays} days after changes were requested. Please feel free to reopen it once you've addressed the requested changes.`,
             })
+
+            console.log(`Closed inactive PR #${pullRequest.number}`)
           }
         }
       }
