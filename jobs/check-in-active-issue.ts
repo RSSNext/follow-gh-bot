@@ -4,7 +4,7 @@ import { appConfig } from '../configs'
 
 const tick = async function () {
   console.log('Checking in-active issues...')
-  const { data: issues } = await octokit.issues.list({
+  const { data: issues } = await octokit.issues.listForRepo({
     owner: appConfig.owner,
     repo: appConfig.repo,
     state: 'open',

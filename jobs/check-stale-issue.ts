@@ -4,7 +4,7 @@ import { octokit } from '../octokit'
 
 const tick = async function () {
   console.log('Checking stale issues for closing...')
-  const { data: issues } = await octokit.issues.list({
+  const { data: issues } = await octokit.issues.listForRepo({
     owner: appConfig.owner,
     repo: appConfig.repo,
     state: 'open',
