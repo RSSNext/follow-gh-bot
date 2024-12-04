@@ -1,6 +1,7 @@
 import express from 'express'
 import { Webhooks } from '@octokit/webhooks'
-import { handlePRComment } from './pr-bot'
+
+import { handleIssueComment, handlePRComment } from './pr-bot'
 import { conventionalCommit, isTrustedUser } from './utils'
 import { octokit } from './octokit'
 import { analyzePR } from './analyze-pr'
@@ -135,7 +136,20 @@ webhooks.on('issue_comment.created', async ({ payload }) => {
 
   console.log('Received comment:', commentBody)
 
-  await handlePRComment(owner, repo, prNumber, commentId, commentBody)
+  const isPRComment = payload.issue.pull_request
+
+  if (isPRComment) {
+    await handlePRComment(owner, repo, prNumber, commentId, commentBody)
+  } else {
+    await handleIssueComment(
+      owner,
+      repo,
+      prNumber,
+      commentId,
+      commentBody,
+      payload.issue,
+    )
+  }
 })
 
 app.listen(port, () => {

@@ -1,10 +1,11 @@
 import 'dotenv/config'
 
-import { isTrustedUser } from './utils'
-import { octokit } from './octokit'
+import type { components } from '@octokit/openapi-webhooks-types'
 import { analyzePR } from './analyze-pr'
+import { octokit } from './octokit'
+import { isTrustedUser } from './utils'
 
-async function handlePRComment(
+export async function handlePRComment(
   owner: string,
   repo: string,
   prNumber: number,
@@ -109,5 +110,27 @@ async function applyAIReviewSuggestion(
   }
 }
 
-// Export the handlePRComment function to be used by your webhook handler
-export { handlePRComment }
+export async function handleIssueComment(
+  owner: string,
+  repo: string,
+  issueNumber: number,
+  commentId: number,
+  commentBody: string,
+  issue: components['schemas']['webhook-issue-comment-created']['issue'],
+) {
+  const hasBumpComment = commentBody.toLowerCase().includes('bump')
+
+  if (
+    hasBumpComment &&
+    issue.state === 'open' &&
+    issue.labels.some((label) => label.name === 'stale')
+  ) {
+    // Remove stale label if there's a recent bump
+    await octokit.issues.removeLabel({
+      owner,
+      repo,
+      issue_number: issueNumber,
+      name: 'stale',
+    })
+  }
+}

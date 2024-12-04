@@ -44,34 +44,7 @@ const tick = async function () {
       (label: any) => label.name === 'stale',
     )
 
-    // Get latest comments
-    const { data: comments } = await octokit.issues.listComments({
-      owner: appConfig.owner,
-      repo: appConfig.repo,
-      issue_number: issue.number,
-    })
-
-    // Check if there's a recent "bump" comment
-    const hasBumpComment = comments.some((comment) => {
-      const commentDate = new Date(comment.created_at)
-      const isRecent =
-        (now.getTime() - commentDate.getTime()) / (1000 * 60 * 60 * 24) < 30
-      return isRecent && comment.body?.toLowerCase().includes('bump')
-    })
-
-    if (hasBumpComment && hasStaleLabel) {
-      // Remove stale label if there's a recent bump
-      await octokit.issues.removeLabel({
-        owner: appConfig.owner,
-        repo: appConfig.repo,
-        issue_number: issue.number,
-        name: 'stale',
-      })
-    } else if (
-      !hasStaleLabel &&
-      diffDays >= appConfig.markStaleIssueAfterDays &&
-      !hasBumpComment
-    ) {
+    if (!hasStaleLabel && diffDays >= appConfig.markStaleIssueAfterDays) {
       // Add stale label and comment if inactive for 30 days
       await octokit.issues.addLabels({
         owner: appConfig.owner,
@@ -80,14 +53,31 @@ const tick = async function () {
         labels: ['stale'],
       })
 
-      await octokit.issues.createComment({
+      // Get latest comments
+      const { data: comments } = await octokit.issues.listComments({
         owner: appConfig.owner,
         repo: appConfig.repo,
         issue_number: issue.number,
-        body: `This issue has been automatically marked as stale. If this issue is still affecting you, please leave any comment (for example, "bump"), and we'll keep it open. If you have any new additional information—in particular, if this is still reproducible in the latest version of Follow or in the beta—please include it with your comment!`,
+        // TODO: 获取所有评论
+        per_page: 100,
       })
 
-      console.log(`Marked issue #${issue.number} as stale`)
+      const commentBody = `This issue has been automatically marked as stale. If this issue is still affecting you, please leave any comment (for example, "bump"), and we'll keep it open. If you have any new additional information—in particular, if this is still reproducible in the latest version of Follow or in the beta—please include it with your comment!`
+
+      const isCommentBefore = comments.at(-1)?.body === commentBody
+
+      if (!isCommentBefore) {
+        await octokit.issues.createComment({
+          owner: appConfig.owner,
+          repo: appConfig.repo,
+          issue_number: issue.number,
+          body: commentBody,
+        })
+      }
+
+      console.log(
+        `Marked issue #${issue.number} as stale, [${issue.title}](${issue.html_url})`,
+      )
     }
   }
 }
