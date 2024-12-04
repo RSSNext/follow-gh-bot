@@ -10,6 +10,7 @@ const tick = async function () {
     state: 'open',
     labels: 'stale',
   })
+  console.log(`Found ${issues.length} issues`)
 
   const now = new Date()
   for (const issue of issues) {

@@ -10,6 +10,8 @@ const tick = async function () {
     state: 'open',
   })
 
+  console.log(`Found ${issues.length} issues`)
+
   const now = new Date()
   for (const issue of issues) {
     // Skip pull requests (they are also considered issues in GitHub's API)
