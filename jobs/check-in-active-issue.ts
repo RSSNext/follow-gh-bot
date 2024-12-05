@@ -25,9 +25,13 @@ const tick = async function () {
 
   const now = new Date()
   for (const issue of allIssues) {
+    const whitelistLabels = ['enhancement', 'Improvement', 'bug']
     if (
-      issue.labels.includes('enhancement') ||
-      issue.labels.includes('Improvement')
+      issue.labels.some((label: any) =>
+        whitelistLabels.includes(
+          typeof label === 'string' ? label : label.name,
+        ),
+      )
     ) {
       continue
     }
