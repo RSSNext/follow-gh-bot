@@ -44,8 +44,8 @@ const tick = async function () {
     const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24))
 
     // Check if issue has 'stale' label
-    const hasStaleLabel = issue.labels.some(
-      (label: any) => label.name === 'stale',
+    const hasStaleLabel = issue.labels.some((label: any) =>
+      typeof label === 'string' ? label === 'stale' : label.name === 'stale',
     )
 
     if (!hasStaleLabel && diffDays >= appConfig.markStaleIssueAfterDays) {
