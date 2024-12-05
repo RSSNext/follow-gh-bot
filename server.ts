@@ -92,6 +92,13 @@ For more details, please visit: https://www.conventionalcommits.org/
 
 webhooks.on('issues.opened', async ({ payload }) => {
   console.log('Received issue opened:', payload)
+  if (payload.issue.performed_via_github_app?.owner?.login === 'linear') {
+    // Linear issue, created by Linear app, ignore
+    console.log(
+      `Ignore issue created by Linear app, [#${payload.issue.number} - ${payload.issue.title}]`,
+    )
+    return
+  }
   const comment = payload.issue.body
 
   if (
