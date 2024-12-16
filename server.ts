@@ -159,6 +159,32 @@ webhooks.on('issue_comment.created', async ({ payload }) => {
   }
 })
 
+webhooks.on('pull_request.closed', async ({ payload }) => {
+  // Check if the PR was merged (closed without merging won't trigger this)
+  if (!payload.pull_request.merged) {
+    return
+  }
+
+  const sender = payload.pull_request.user.login
+  const isMember = await isTrustedUser(
+    payload.repository.owner.login,
+    payload.repository.name,
+    sender,
+  )
+
+  // Only send thank you message to external contributors
+  if (!isMember) {
+    await octokit.issues.createComment({
+      owner: payload.repository.owner.login,
+      repo: payload.repository.name,
+      issue_number: payload.pull_request.number,
+      body: `Thank you @${sender} for your contribution! 🎉 
+
+Your pull request has been merged and we really appreciate your help in making this project better. We hope to see more contributions from you in the future! 💪`,
+    })
+  }
+})
+
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`)
 })
