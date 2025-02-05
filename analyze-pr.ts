@@ -44,7 +44,7 @@ export async function analyzePR(
 
   // 使用 OpenAI 生成 PR 标题和修改摘要
   const titleAndSummaryResponse = await openai.chat.completions.create({
-    model: 'gpt-4o-mini',
+    model: 'gpt-4o-mini-2024-07-18',
     messages: [
       {
         role: 'system',
@@ -95,7 +95,8 @@ export async function analyzePR(
 
   // 使用 OpenAI 生成代码审查意见
   const reviewResponse = await openai.chat.completions.create({
-    model: 'gpt-4o',
+    model: 'gpt-4o-2024-11-20',
+
     messages: [
       {
         role: 'system',
