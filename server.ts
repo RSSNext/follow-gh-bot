@@ -179,7 +179,7 @@ webhooks.on('pull_request.closed', async ({ payload }) => {
     return
   }
 
-  if (payload.sender.type === 'Bot') {
+  if (payload.pull_request.user.type === 'Bot') {
     return
   }
 
