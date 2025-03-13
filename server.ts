@@ -34,7 +34,9 @@ app.post('/webhook', (req, res) => {
 webhooks.on('pull_request.opened', async ({ payload }) => {
   console.log('Received pull request:', payload)
 
-  if (payload.sender.type === 'Bot') return
+  if (payload.sender.type === 'Bot') {
+    return
+  }
 
   const sender = payload.sender.login
   const isMember = await isTrustedUser(
@@ -95,6 +97,11 @@ For more details, please visit: https://www.conventionalcommits.org/
 
 webhooks.on('issues.opened', async ({ payload }) => {
   console.log('Received issue opened:', payload)
+
+  if (payload.sender.type === 'Bot') {
+    return
+  }
+
   if (payload.issue.performed_via_github_app?.owner?.login === 'linear') {
     // Linear issue, created by Linear app, ignore
     console.log(
@@ -146,6 +153,10 @@ webhooks.on('issue_comment.created', async ({ payload }) => {
 
   console.log('Received comment:', commentBody)
 
+  if (payload.sender.type === 'Bot') {
+    return
+  }
+
   const isPRComment = payload.issue.pull_request
 
   if (isPRComment) {
@@ -165,6 +176,10 @@ webhooks.on('issue_comment.created', async ({ payload }) => {
 webhooks.on('pull_request.closed', async ({ payload }) => {
   // Check if the PR was merged (closed without merging won't trigger this)
   if (!payload.pull_request.merged) {
+    return
+  }
+
+  if (payload.sender.type === 'Bot') {
     return
   }
 
