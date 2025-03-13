@@ -33,6 +33,9 @@ app.post('/webhook', (req, res) => {
 
 webhooks.on('pull_request.opened', async ({ payload }) => {
   console.log('Received pull request:', payload)
+
+  if (payload.sender.type === 'Bot') return
+
   const sender = payload.sender.login
   const isMember = await isTrustedUser(
     payload.repository.owner.login,
