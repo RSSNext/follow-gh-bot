@@ -196,7 +196,7 @@ webhooks.on('pull_request.closed', async ({ payload }) => {
       owner: payload.repository.owner.login,
       repo: payload.repository.name,
       issue_number: payload.pull_request.number,
-      body: `Thank you @${sender} for your contribution! 🎉 
+      body: `Thank you for your contribution! 🎉 
 
 Your pull request has been merged and we really appreciate your help in making this project better. We hope to see more contributions from you in the future! 💪`,
     })
