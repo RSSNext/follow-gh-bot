@@ -1,3 +1,4 @@
+import type { ChatModel } from 'openai/resources/chat/chat.mjs'
 import { openai } from './ai'
 import { octokit } from './octokit'
 
@@ -44,7 +45,7 @@ export async function analyzePR(
 
   // 使用 OpenAI 生成 PR 标题和修改摘要
   const titleAndSummaryResponse = await openai.chat.completions.create({
-    model: 'gpt-4o-mini-2024-07-18',
+    model: (process.env.MINI_MODEL_NAME || process.env.MODEL_NAME) as ChatModel,
     messages: [
       {
         role: 'system',
@@ -95,7 +96,7 @@ export async function analyzePR(
 
   // 使用 OpenAI 生成代码审查意见
   const reviewResponse = await openai.chat.completions.create({
-    model: 'gpt-4o-2024-11-20',
+    model: process.env.MODEL_NAME as ChatModel,
 
     messages: [
       {
