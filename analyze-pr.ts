@@ -57,33 +57,41 @@ export async function analyzePR(
         content: `PR Summary:\n\n${summary}\n\nCode changes:\n${diffs}\n\nProvide a Conventional Commits format PR title in 60 characters or less and a brief summary of the main changes and their impact.`,
       },
     ],
-    functions: [
+    tools: [
       {
-        name: 'generate_pr_title_and_summary',
-        description:
-          'Generate a PR title and summary based on the given changes',
-        parameters: {
-          type: 'object',
-          properties: {
-            title: {
-              type: 'string',
-              description:
-                'Conventional Commits format PR title in 60 characters or less',
+        type: 'function',
+        function: {
+          name: 'generate_pr_title_and_summary',
+          description:
+            'Generate a PR title and summary based on the given changes',
+          parameters: {
+            type: 'object',
+            properties: {
+              title: {
+                type: 'string',
+                description:
+                  'Conventional Commits format PR title in 60 characters or less',
+              },
+              summary: {
+                type: 'string',
+                description:
+                  'Brief summary of the main changes and their impact',
+              },
             },
-            summary: {
-              type: 'string',
-              description: 'Brief summary of the main changes and their impact',
-            },
+            required: ['title', 'summary'],
           },
-          required: ['title', 'summary'],
         },
       },
     ],
-    function_call: { name: 'generate_pr_title_and_summary' },
+    tool_choice: {
+      type: 'function',
+      function: { name: 'generate_pr_title_and_summary' },
+    },
   })
 
   const titleAndSummary = JSON.parse(
-    titleAndSummaryResponse.choices[0].message.function_call?.arguments || '{}',
+    titleAndSummaryResponse.choices[0].message.tool_calls?.[0]?.function
+      .arguments || '{}',
   )
 
   if (!titleAndSummary.title || !titleAndSummary.summary) {
