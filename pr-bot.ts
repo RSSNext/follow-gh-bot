@@ -38,7 +38,10 @@ export async function handlePRComment(
     }
 
     default: {
-      await analyzePR(owner, repo, prNumber)
+      await analyzePR(owner, repo, prNumber).catch((error) => {
+        console.error('Error analyzing PR:', error)
+        return null
+      })
       break
     }
   }

@@ -49,7 +49,10 @@ webhooks.on('pull_request.opened', async ({ payload }) => {
     payload.repository.owner.login,
     payload.repository.name,
     payload.pull_request.number,
-  )
+  ).catch((error) => {
+    console.error('Error analyzing PR:', error)
+    return null
+  })
 
   if (isMember) return
 
